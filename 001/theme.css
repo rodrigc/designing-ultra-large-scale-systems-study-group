@@ -1,0 +1,87 @@
+/* @theme rust-demo */
+@import 'default';
+
+section {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  padding: 60px 80px;
+}
+
+h1 {
+  color: #f38ba8;
+  font-size: 2.4em;
+}
+
+h2 {
+  color: #fab387;
+}
+
+strong {
+  color: #a6e3a1;
+}
+
+code {
+  background: #313244;
+  color: #89dceb;
+  border-radius: 4px;
+}
+
+pre {
+  background: #313244;
+  border-radius: 8px;
+}
+
+section.lead {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+/* --- staggered "build" animation for bullet lists ---
+   Marp has no native fragment/click-to-reveal system, so this
+   demonstrates the CSS-only approach: each <li> fades + slides in
+   with an increasing animation-delay, purely via nth-child. It plays
+   automatically as soon as the slide becomes visible (driven by the
+   slide's own view-transition entry), no JS required. */
+section.build ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+section.build li {
+  opacity: 0;
+  transform: translateX(-20px);
+  animation: build-in 0.5s ease-out forwards;
+  padding: 8px 0;
+  font-size: 1.1em;
+}
+
+section.build li::before {
+  content: "▸ ";
+  color: #a6e3a1;
+}
+
+section.build li:nth-child(1) { animation-delay: 0.1s; }
+section.build li:nth-child(2) { animation-delay: 0.5s; }
+section.build li:nth-child(3) { animation-delay: 0.9s; }
+section.build li:nth-child(4) { animation-delay: 1.3s; }
+section.build li:nth-child(5) { animation-delay: 1.7s; }
+
+@keyframes build-in {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* morphing element example: this badge keeps its identity
+   across the slide transition via view-transition-name */
+.badge {
+  display: inline-block;
+  background: #a6e3a1;
+  color: #1e1e2e;
+  font-weight: bold;
+  padding: 6px 14px;
+  border-radius: 20px;
+  view-transition-name: rustbadge;
+}
