@@ -122,7 +122,8 @@ We also act as a **tech evaluation and critique** group:
 - What a debit/credit is in a financial system
 - How debit/credit is implemented in traditional SQL (as defined in Jim Gray's paper [A Measure of Transaction Processing Power](https://jimgray.azurewebsites.net/papers/AMeasureOfTransactionProcessingPower.pdf))
 - Existing problems and scalability limitations
-- Comparison with TigerBeetle's implementation
+- How TigerBeetle models schema (spoiler: **no schema language**)
+- Comparison with TigerBeetle’s transfer-first interface
 
 ---
 
@@ -321,11 +322,126 @@ Debit/credit is the product, not an application pattern on top of SQL.
 
 TigerBeetle is **not** a general-purpose OLTP store.
 
-- No SQL, no tables for arbitrary schemas, no “store anything”
+- Not “Postgres, but faster for money”
 - Purpose-built for **accounts**, **transfers**, and balances
 - Designed to sit **beside** a general-purpose DB (Postgres, etc.), not replace it
 
 See: [System architecture](https://docs.tigerbeetle.com/coding/system-architecture/)
+
+---
+
+<!-- _class: lead -->
+
+## What language specifies the schema?
+
+### Short answer: **none.**
+
+There is no schema language — and that is a deliberate design choice.
+
+---
+
+<!-- _class: build -->
+
+## Not SQL — and not “schema-less”
+
+In a general-purpose database you **declare** structure:
+
+```sql
+CREATE TABLE accounts (...);
+CREATE TABLE transfers (...);
+ALTER TABLE ... ADD COLUMN ...;
+```
+
+That is **DDL** (Data Definition Language): you invent tables, columns, and migrations.
+
+TigerBeetle has **no DDL**, no migrations, no user-defined tables.
+
+---
+
+<!-- _class: build -->
+
+## The Schema Is Fixed — Built Into the Product
+
+TigerBeetle ships with a **universal, fixed schema** for double-entry bookkeeping.
+
+| Entity | Role |
+| --- | --- |
+| **Ledger** | Partition (e.g. currency / asset group) — a **number**, not a table you create |
+| **Account** | A balance holder (who holds value) |
+| **Transfer** | Move value: debit one account, credit another |
+
+You do **not** design tables.  
+You **use** the tables the database already is.
+
+See: [Data modeling](https://docs.tigerbeetle.com/coding/data-modeling/)
+
+---
+
+<!-- _class: build -->
+
+## Debit/Credit = The Universal Schema
+
+TigerBeetle’s claim: debit/credit is **minimal and complete** for exchanges of value.
+
+- Two entity kinds: **accounts** and **transfers**
+- One invariant: every debit has an equal and opposite credit
+- Same shape for payments, refunds, FX legs, reservations, … any product line
+
+New product feature → usually **new `code`s / accounts**, not `ALTER TABLE`.
+
+---
+
+<!-- _class: build -->
+
+## Fixed Fields, Fixed Sizes
+
+Each record has a **closed set of fields** (fixed-width integers, not free-form rows).
+
+**Account** (conceptually): `id`, ledger, code, flags, debits/credits, `user_data_*`, timestamp
+
+**Transfer** (conceptually): `id`, debit account, credit account, amount, ledger, code, flags, `user_data_*`, timestamp
+
+- No arbitrary strings in the hot path
+- No “add a JSON column later”
+- Immutability + fixed layout → simpler correctness and performance
+
+---
+
+<!-- _class: build -->
+
+## How Do You “Configure” Types Then?
+
+Soft typing with **integers** — meanings live in the app / OLGP DB.
+
+| Human meaning | In TigerBeetle |
+| --- | --- |
+| Currency “USD” | `ledger = 1` (or another number you choose) |
+| Account type “customer cash” | account `code = 1001` |
+| Transfer reason “refund” | transfer `code = 42` |
+
+Map numbers ↔ names in your control-plane DB (or hard-code enums).  
+**Never** fetch that metadata on the hot transfer path.
+
+See: [Ledger, account, and transfer types](https://docs.tigerbeetle.com/coding/system-architecture/#ledger-account-and-transfer-types)
+
+---
+
+<!-- _class: build -->
+
+## You Speak an API — Not a Schema Language
+
+[Clients](https://docs.tigerbeetle.com/coding/clients/) call fixed operations:
+
+- `create_accounts` / `create_transfers`
+- Lookups and queries by id / filter
+
+```javascript
+// Not CREATE TABLE — create *instances* of the fixed Account type
+client.createAccounts([
+  { id: 1n, ledger: 1, code: 1, flags: 0 }, // Account A
+  { id: 2n, ledger: 1, code: 1, flags: 0 }, // Account B
+]);
+```
 
 ---
 
@@ -337,6 +453,7 @@ The interface *is* the domain model.
 
 | General-purpose SQL | TigerBeetle |
 | --- | --- |
+| You design schema with DDL | Schema is **fixed** (accounts + transfers) |
 | `UPDATE` + `INSERT` + app logic | **Transfer** between two accounts |
 | Balance is a column you mutate | Balance is **derived / enforced** by the engine |
 | Double-entry is a convention | Double-entry is **built in** |
@@ -350,21 +467,6 @@ One API call ≈ one business transfer — not a pile of SQL statements.
 ## DebitCredit in TigerBeetle
 
 Same idea as Jim Gray’s DebitCredit — but as a **single transfer primitive**, not multi-statement SQL.
-
-**Create accounts** (once):
-
-```javascript
-client.createAccounts([
-  { id: 1n, ledger: 1, code: 1, flags: 0 }, // Account A
-  { id: 2n, ledger: 1, code: 1, flags: 0 }, // Account B
-]);
-```
-
----
-
-<!-- _class: build -->
-
-## DebitCredit in TigerBeetle
 
 **Transfer $1** from Account A → Account B (one request):
 
@@ -430,14 +532,14 @@ Fewer places for “almost correct” money code in the application.
 
 ## Split the Planes
 
-Use the right tool for each job.
+Use the right tool for each job — including **where schema lives**.
 
 | Hot path (data plane) | Cold path (control plane) |
 | --- | --- |
-| **TigerBeetle** — balances & transfers | **OLGP** (e.g. Postgres) — users, names, metadata |
-| High TPS, strict financial invariants | Flexible schema, strings, reporting joins |
+| **TigerBeetle** — fixed account/transfer schema | **OLGP** (e.g. Postgres) — users, names, type maps |
+| High TPS, strict financial invariants | Flexible DDL, strings, reporting joins |
 
-TigerBeetle records *who moved how much*; the general-purpose DB stores *who they are*.
+TigerBeetle records *who moved how much*; the general-purpose DB stores *who they are* and what `ledger`/`code` mean.
 
 ---
 
@@ -482,3 +584,17 @@ These slides were prepared with the help of **Grok AI**.
 - **Read Gray’s paper** — [A Measure of Transaction Processing Power](https://jimgray.azurewebsites.net/papers/AMeasureOfTransactionProcessingPower.pdf) — and reproduce DebitCredit in SQL on a database like **Postgres**
 - **Read the [TigerBeetle docs](https://docs.tigerbeetle.com/)**, set up TigerBeetle, and implement a simple debit/credit
 - **Share** your efforts and results on the Designing Ultra Large Scale Systems **Discord**
+
+---
+
+<!-- _class: build -->
+
+## Stay in touch!
+
+- **Craig Rodrigues**  
+  LinkedIn: https://linkedin.com/in/rodrigc  
+  Discord: @CraigRodrigues
+
+- **Chiradip Mandal**  
+  LinkedIn: https://www.linkedin.com/in/chiradip/  
+  Discord: @Chiradip Mandal
