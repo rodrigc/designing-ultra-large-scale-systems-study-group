@@ -32,6 +32,57 @@ pre {
   border-radius: 8px;
 }
 
+/* Tables: match dark slide palette (readable contrast) */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.6em 0 0;
+  font-size: 0.95em;
+  background: #181825;
+  color: #cdd6f4;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #45475a;
+}
+
+th,
+td {
+  padding: 0.55em 0.85em;
+  border: 1px solid #45475a;
+  text-align: left;
+  vertical-align: top;
+  color: #cdd6f4;
+  background: #181825;
+}
+
+th {
+  background: #313244;
+  color: #f5e0dc;
+  font-weight: 700;
+}
+
+tr:nth-child(even) td {
+  background: #1e1e2e;
+}
+
+/* Override default theme light-table styles */
+section table,
+section th,
+section td {
+  background-color: #181825;
+  color: #cdd6f4;
+  border-color: #45475a;
+}
+
+section th {
+  background-color: #313244;
+  color: #f5e0dc;
+}
+
+section tr:nth-child(even) td {
+  background-color: #1e1e2e;
+}
+
 section.lead {
   display: flex;
   justify-content: center;
@@ -76,6 +127,43 @@ section.build li:nth-child(5) { animation-delay: 1.7s; }
 
 /* morphing element example: this badge keeps its identity
    across the slide transition via view-transition-name */
+/* Debit/credit diagram slide */
+section.diagram h2 {
+  margin-bottom: 0.25em;
+}
+
+section.diagram video,
+section.diagram iframe.diagram-frame {
+  width: 92%;
+  height: 68%;
+  max-height: 500px;
+  display: block;
+  margin: 0.2em auto 0;
+  border: 0;
+  border-radius: 12px;
+  background: #11111b;
+}
+
+section.diagram video {
+  height: auto;
+  max-height: 72%;
+}
+
+section.diagram .diagram-caption {
+  text-align: center;
+  margin-top: 0.5em;
+  font-size: 1.1em;
+  color: #a6adc8;
+}
+
+section.diagram .diagram-caption strong:first-of-type {
+  color: #f38ba8;
+}
+
+section.diagram .diagram-caption strong:last-of-type {
+  color: #a6e3a1;
+}
+
 .badge {
   display: inline-block;
   background: #a6e3a1;
