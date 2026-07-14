@@ -47,6 +47,34 @@ Mastering this topic requires constant study and review of:
 
 <!-- _class: build -->
 
+## Guiding Principles
+
+We choose presentations that:
+
+1. **No product pitches** — substance over sales
+2. **Adhere to computer science fundamentals** — grounded in first principles
+3. **Interesting claims must be verifiable** — papers, code, benchmarks, not vibes
+4. **Solve a specific problem that can help the industry at large** — transferable lessons, not navel-gazing
+
+---
+
+<!-- _class: build -->
+
+## Study Group — and Tech Evaluation & Critique
+
+We are a **study group**: we learn together from papers, systems, and implementations.
+
+We also act as a **tech evaluation and critique** group:
+
+- Examine claims carefully — architecture, performance, correctness
+- Ask hard questions: what works, what doesn’t, under what assumptions?
+- Separate marketing from engineering substance
+- Leave with a clearer judgment of when a technology is (or isn’t) a fit
+
+---
+
+<!-- _class: build -->
+
 ## Study Group Structure
 
 - Before the meeting: participants are encouraged to study the prerequisite material
@@ -369,3 +397,18 @@ TigerBeetle records *who moved how much*; the general-purpose DB stores *who the
 > Make a database whose **core abstraction** *is* debit/credit.
 
 That is how TigerBeetle attacks impedance mismatch, lock×RTT limits, and domain correctness at once.
+
+---
+
+<!-- _class: build -->
+
+## Acknowledgments
+
+Thank you:
+
+- **Chiradip Mandal** — https://chiradip.com  
+  Inspiration for this study group and for deep study of data algorithms
+- **Joran Dirk Greef** and the TigerBeetle team — https://tigerbeetle.com  
+  Ideas, writings, and talks on debit/credit as a first-class primitive
+- **Kyle Kingsbury** — https://jepsen.io  
+  Independent analysis that helps us evaluate systems carefully
