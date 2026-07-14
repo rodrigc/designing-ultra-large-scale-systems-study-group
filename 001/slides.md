@@ -412,3 +412,11 @@ Thank you:
   Ideas, writings, and talks on debit/credit as a first-class primitive
 - **Kyle Kingsbury** — https://jepsen.io  
   Independent analysis that helps us evaluate systems carefully
+
+---
+
+<!-- _class: build -->
+
+## Acknowledgments (AI)
+
+These slides were prepared with the help of **Grok AI**.
