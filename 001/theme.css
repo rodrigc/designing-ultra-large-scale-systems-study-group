@@ -133,26 +133,23 @@ section.diagram h2 {
 }
 
 section.diagram video,
-section.diagram iframe.diagram-frame {
+section.diagram iframe.diagram-frame,
+section.diagram img {
   width: 92%;
-  height: 68%;
-  max-height: 500px;
+  height: auto;
+  max-height: 72%;
   display: block;
   margin: 0.2em auto 0;
   border: 0;
   border-radius: 12px;
   background: #11111b;
-}
-
-section.diagram video {
-  height: auto;
-  max-height: 72%;
+  object-fit: contain;
 }
 
 section.diagram .diagram-caption {
   text-align: center;
-  margin-top: 0.5em;
-  font-size: 1.1em;
+  margin-top: 0.45em;
+  font-size: 0.95em;
   color: #a6adc8;
 }
 

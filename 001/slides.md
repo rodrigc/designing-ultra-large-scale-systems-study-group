@@ -148,6 +148,43 @@ Jim Gray, [*A Measure of Transaction Processing Power*](https://jimgray.azureweb
 
 The canonical OLTP workload and measure of "transactions per second".
 
+**Gray’s DebitCredit pseudocode:**
+
+```
+DebitCredit:
+  BEGIN-TRANSACTION
+    READ MESSAGE FROM TERMINAL (100 bytes)
+    REWRITE ACCOUNT (random)
+    WRITE HISTORY (sequential)
+    REWRITE TELLER (random)
+    REWRITE BRANCH (random)
+    WRITE MESSAGE TO TERMINAL (200 bytes)
+  COMMIT-TRANSACTION
+```
+
+---
+
+<!-- _class: build -->
+
+## DebitCredit Benchmark
+
+Database scale in Gray’s paper (scaled with TPS):
+
+| Record type | Count (at peak scale) | Access pattern |
+| --- | --- | --- |
+| Branch | 1,000 | random rewrite |
+| Teller | 10,000 | random rewrite |
+| Account | 10,000,000 | random rewrite |
+| History | 90-day trail | sequential write |
+
+Every transaction rewrites **one** account, **one** teller, and **one** branch — plus appends history.
+
+---
+
+<!-- _class: build -->
+
+## DebitCredit Benchmark
+
 **Sample SQL implementation — debit:**
 
 ```sql
@@ -188,7 +225,7 @@ COMMIT;
 
 ### Issues Joran Dirk Greef highlights for SQL debit/credit
 
-[1000x: The Power of an Interface for Performance](https://www.youtube.com/watch?v=yKgfk8lTQuE)  
+[1000x: The Power of an Interface for Performance](https://www.youtube.com/watch?v=yKgfk8lTQuE&t=2609s)  
 [Rediscovering Transaction Processing From History and First Principles](https://tigerbeetle.com/blog/2024-07-23-rediscovering-transaction-processing-from-history-and-first-principles/)
 
 ---
@@ -205,6 +242,20 @@ One **financial** transfer ≠ one database round-trip.
 
 ---
 
+<!-- _class: diagram -->
+
+## SQL Sequence Holds Locks Across RTTs
+
+![SQL interactive transaction with LOCKS spanning network RTTs](assets/sql-lock-sequence.jpg)
+
+<div class="diagram-caption">
+
+From [Joran’s talk (~18:29)](https://youtu.be/yKgfk8lTQuE?t=1109): locks held across network time while the app decides.
+
+</div>
+
+---
+
 <!-- _class: build -->
 
 ## Locks × Network RTT
@@ -214,19 +265,20 @@ Concurrency control collides with distributed reality.
 - Row locks are held **while waiting on the network**
 - Even a few RTTs per transfer cap how many transfers can touch the same rows per second
 - More hardware does not fix this — the limit is structural, not just “CPU is too slow”
-
 ---
 
 <!-- _class: build -->
 
-## Hot Rows Serialize the System
+## REWRITE BRANCH → Hot Account Contention
 
-DebitCredit is contention-heavy by design.
+Gray’s pseudocode routes **every** transaction through a branch row.
 
-- Many customer accounts debit into a few **hot** internal accounts (e.g. branch / liquidity)
-- Hot rows are locked by almost every transfer → **effective serialization**
-- Horizontal scaling of the app tier does not remove single-row bottlenecks
+- **10M** customer accounts, but only **1K** branches (and few tellers)
+- `REWRITE BRANCH` is on the critical path of almost every DebitCredit
+- That branch row becomes a **hot account**: locked by nearly all concurrent transfers
+- Result: **effective serialization** — app-tier scale-out cannot remove a single-row bottleneck
 
+Joran’s point in the talk: OLTP is characterized by this intrinsic contention, not just random I/O.
 ---
 
 <!-- _class: build -->
@@ -420,3 +472,13 @@ Thank you:
 ## Acknowledgments (AI)
 
 These slides were prepared with the help of **Grok AI**.
+
+---
+
+<!-- _class: build -->
+
+## Homework (optional)
+
+- **Read Gray’s paper** — [A Measure of Transaction Processing Power](https://jimgray.azurewebsites.net/papers/AMeasureOfTransactionProcessingPower.pdf) — and reproduce DebitCredit in SQL on a database like **Postgres**
+- **Read the [TigerBeetle docs](https://docs.tigerbeetle.com/)**, set up TigerBeetle, and implement a simple debit/credit
+- **Share** your efforts and results on the Designing Ultra Large Scale Systems **Discord**
