@@ -124,6 +124,7 @@ We also act as a **tech evaluation and critique** group:
 - Existing problems and scalability limitations
 - How TigerBeetle models schema (spoiler: **no schema language**)
 - Comparison with TigerBeetle’s transfer-first interface
+- Performance vs general-purpose SQL (interface, batching, contention)
 
 ---
 
@@ -141,6 +142,63 @@ We also act as a **tech evaluation and critique** group:
 
 ---
 
+<!-- _class: diagram -->
+
+## Trends in Debit / Credit volumes
+
+![Transaction volume growth 2015–2025: 100x in-game, 1000x energy/ride-sharing, 10000x realtime payments](assets/joran-transaction-volume-trends.jpg)
+
+<div class="diagram-caption">
+
+[Joran Dirk Greef, “1000×…”](https://www.youtube.com/watch?v=yKgfk8lTQuE&t=753s) — realtime payments ≈ **10,000×** over a decade
+
+</div>
+
+---
+
+<!-- _class: build -->
+
+## Instant Payment Systems
+
+National-scale real-time rails — debit/credit at country scale:
+
+- **India — UPI** (Unified Payments Interface)
+- **Brazil — PIX**
+- **U.S. — The Clearing House RTP**, Federal Reserve **FedNow**
+
+<div class="stat-callout">
+
+<div class="stat-label">India UPI · order of magnitude</div>
+
+<div class="stat-row">
+<span class="stat"><strong>~16 billion</strong><em>transfers / month</em></span>
+<span class="stat"><strong>~6,000</strong><em>TPS average</em></span>
+</div>
+
+<div class="stat-cite">
+
+Source: [NPCI UPI product statistics](https://www.npci.org.in/what-we-do/upi/product-statistics) · as cited in [Jepsen: TigerBeetle 0.16.11](https://jepsen.io/analyses/tigerbeetle-0.16.11)
+
+</div>
+
+</div>
+
+---
+
+<!-- _class: diagram -->
+
+## Gray (1985): DebitCredit — the Hot Branch
+
+![Jim Gray DebitCredit pseudocode with REWRITE BRANCH highlighted](assets/joran-debitcredit-branch.jpg)
+
+<div class="diagram-caption">
+
+From [“1000×: The Power of an Interface for Performance”](https://www.youtube.com/watch?v=yKgfk8lTQuE&t=482s) (Joran Dirk Greef). Branch ≈ **hot account** — contention is the point of the benchmark.
+
+</div>
+
+---
+
 <!-- _class: build -->
 
 ## DebitCredit Benchmark
@@ -151,17 +209,15 @@ The canonical OLTP workload and measure of "transactions per second".
 
 **Gray’s DebitCredit pseudocode:**
 
-```
-DebitCredit:
+<pre class="pseudocode"><code>DebitCredit:
   BEGIN-TRANSACTION
     READ MESSAGE FROM TERMINAL (100 bytes)
     REWRITE ACCOUNT (random)
     WRITE HISTORY (sequential)
     REWRITE TELLER (random)
-    REWRITE BRANCH (random)
+    <mark class="hot-spot">REWRITE BRANCH</mark> (random)
     WRITE MESSAGE TO TERMINAL (200 bytes)
-  COMMIT-TRANSACTION
-```
+  COMMIT-TRANSACTION</code></pre>
 
 ---
 
@@ -554,6 +610,69 @@ That is how TigerBeetle attacks impedance mismatch, lock×RTT limits, and domain
 
 ---
 
+<!-- _class: lead -->
+
+## Performance: Why Does This Matter?
+
+Debit/credit specialization is not only about elegance —  
+it changes **queries × RTTs × locks**, which is where OLTP throughput dies.
+
+---
+
+<!-- _class: diagram -->
+
+## The “1000×” Interface Idea
+
+![General-purpose SQL: 10–20 queries per transfer vs TigerBeetle: up to 8190 transfers in one batch](assets/perf-1000x-interface.jpg)
+
+<div class="diagram-caption">
+
+From [Joran’s talk](https://www.youtube.com/watch?v=yKgfk8lTQuE) and [TigerBeetle’s blog](https://tigerbeetle.com/blog/2024-07-23-rediscovering-transaction-processing-from-history-and-first-principles/): pack debit/credits so one RTT does thousands of financial txs.
+
+</div>
+
+---
+
+<!-- _class: diagram -->
+
+## Interactive SQL vs In-Engine Batch
+
+![Sequence comparison: SQL locks across RTTs vs TigerBeetle one-shot batch](assets/perf-execution-model.jpg)
+
+<div class="diagram-caption">
+
+See also: [Performance — It’s All About The Interface](https://docs.tigerbeetle.com/concepts/performance/)
+
+</div>
+
+---
+
+<!-- _class: tps-slide -->
+
+## Debit/Credit TPS — Postgres vs TigerBeetle
+
+Debit/credit workload · **10% contention** · from [Joran’s talk](https://www.youtube.com/watch?v=yKgfk8lTQuE&t=2840s)
+
+<div class="tps-compare"><div class="tps-card tps-sql"><div class="tps-name">Postgres</div><div class="tps-value">~1,600</div><div class="tps-unit">TPS top speed</div><div class="tps-note">single machine · no replication</div></div><div class="tps-vs">~266×</div><div class="tps-card tps-tb"><div class="tps-name">TigerBeetle</div><div class="tps-value">~400,000</div><div class="tps-unit">TPS peak</div><div class="tps-note">4-node cluster · full consensus</div></div></div>
+
+---
+
+<!-- _class: build -->
+
+## Performance — Takeaways for Debit/Credit
+
+| Lever | General-purpose DB (e.g. Postgres) | TigerBeetle |
+| --- | --- | --- |
+| **Unit of work** | SQL statements / interactive tx | Debit/credit **transfer** batch |
+| **Network** | Many RTTs; locks may span them | One RTT per batch (≤ 8,190) |
+| **Contention** | Hot rows serialize × RTT | Specialized path; no app-held row locks |
+| **Scale model** | Scale-out / shards (hard when hot) | **Scale-up** primary; replicas for HA |
+| **What to measure** | TPS under *your* hot accounts | Same — plus batch size & end-to-end latency |
+
+Independent benches vary (often multi-×, not always 1000× wall-clock). The structural claim is: **fix the impedance mismatch, then engineer the hot path.**
+
+---
+
 <!-- _class: build -->
 
 ## Acknowledgments
@@ -584,6 +703,15 @@ These slides were prepared with the help of **Grok AI**.
 - **Read Gray’s paper** — [A Measure of Transaction Processing Power](https://jimgray.azurewebsites.net/papers/AMeasureOfTransactionProcessingPower.pdf) — and reproduce DebitCredit in SQL on a database like **Postgres**
 - **Read the [TigerBeetle docs](https://docs.tigerbeetle.com/)**, set up TigerBeetle, and implement a simple debit/credit
 - **Share** your efforts and results on the Designing Ultra Large Scale Systems **Discord**
+
+---
+
+<!-- _class: build -->
+
+## Upcoming Meetings
+
+- **August:** Exploring TigerBeetle: Viewstamped Replication (VR) consensus protocol
+- **September:** Using Antithesis for exploring state spaces and fault injection
 
 ---
 
