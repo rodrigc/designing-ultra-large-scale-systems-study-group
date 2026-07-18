@@ -1,4 +1,15 @@
+<table>
+<tr>
+<td width="72" valign="middle">
+<img src="assets/logo.jpg" alt="Designing Ultra Large Scale Systems" width="64" height="64">
+</td>
+<td valign="middle">
+
 # Designing Ultra Large Scale Systems Study Group
+
+</td>
+</tr>
+</table>
 
 A community for engineers who want to go deep on distributed systems, data algorithms, and production-scale designs — through papers, code, and careful critique.
 
@@ -20,10 +31,10 @@ Meetings and presentations are held on Discord. We also have ongoing discussions
 <tr>
 <td>
 
-| # | Title | Date | Slides | Source |
-| ---: | --- | --- | --- | --- |
-| 001 | Exploring TigerBeetle: Debit/Credit Transactions in Conventional Databases vs. First-Class Primitives | July 15, 2026 | [View slides](https://rodrigc.github.io/designing-ultra-large-scale-systems-study-group/001/slides.html) | [`001/`](./001/) |
-| 002 | Exploring TigerBeetle, part 2: Viewstamped Replication (VR) Consensus Protocol | August 19, 2026 | — | — |
+| # | Title | Date | Source |
+| ---: | --- | --- | --- |
+| 001 | [Exploring TigerBeetle: Debit/Credit Transactions in Conventional Databases vs. First-Class Primitives](https://space-rf-org.github.io/dulss-study-group/001/slides.html) | July 15, 2026 | [`001/`](./001/) |
+| 002 | Exploring TigerBeetle, part 2: Viewstamped Replication (VR) Consensus Protocol | August 19, 2026 | — |
 
 </td>
 </tr>
